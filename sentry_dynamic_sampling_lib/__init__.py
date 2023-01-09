@@ -6,6 +6,13 @@ from urllib.parse import urljoin, urlparse
 
 import psutil
 
+from sentry_dynamic_sampling_lib.config import (
+    CONTROLLER_HOST,
+    CONTROLLER_PATH,
+    METRIC_INTERVAL,
+    METRIC_PATH,
+    POLL_INTERVAL,
+)
 from sentry_dynamic_sampling_lib.sampler import TraceSampler
 
 if TYPE_CHECKING:
@@ -34,13 +41,13 @@ def init_wrapper():
 
     sentry_sdk: sentry_sdk_type = importlib.import_module("sentry_sdk")
     client = sentry_sdk.Hub.current.client
-    controller_host = os.getenv("SENTRY_CONTROLLER_HOST")
-    controller_path = os.getenv("SENTRY_CONTROLLER_PATH", "/sentry/apps/{}/")
-    metric_path = os.getenv(
-        "SENTRY_CONTROLLER_METRIC_PATH", "/sentry/apps/{}/metrics/{}/"
-    )
-    poll_interval = int(os.getenv("SENTRY_CONTROLLER_POLL_INTERVAL", "30"))
-    metric_interval = int(os.getenv("SENTRY_CONTROLLER_METRIC_INTERVAL", "300"))
+
+    controller_host = CONTROLLER_HOST
+    controller_path = CONTROLLER_PATH
+    metric_path = METRIC_PATH
+    poll_interval = POLL_INTERVAL
+    metric_interval = METRIC_INTERVAL
+
     if controller_host:
         app_key = build_app_key(client.options)
         controller_endpoint = urljoin(controller_host, controller_path)
