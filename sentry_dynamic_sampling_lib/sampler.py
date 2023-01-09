@@ -31,6 +31,10 @@ class ControllerClient(Thread):
         super().__init__(*args, name="SentryControllerClient", **kwargs)
 
     def run(self):
+        # HACK: Django change the timezone mid startup
+        # Which break the datetime.datetime.now() method
+        # This then break schedule by delaying the startup by the timezone delta
+        sleep(5)
         schedule.every(self.poll_interval).seconds.do(self.update_config)
         schedule.every(self.metric_interval).seconds.do(self.update_metrics)
         while not self.stop.is_set():
