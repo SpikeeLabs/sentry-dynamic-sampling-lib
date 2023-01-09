@@ -2,21 +2,20 @@ from collections import Counter
 from enum import Enum
 from threading import RLock
 
+from sentry_dynamic_sampling_lib.config import (
+    DEFAULT_IGNORED_PATH,
+    DEFAULT_IGNORED_TASK,
+    DEFAULT_SAMPLE_RATE,
+)
 from sentry_dynamic_sampling_lib.utils import synchronized
 
 
 class Config:
     def __init__(self) -> None:
         self._lock = RLock()
-        self._sample_rate = 0.0
-        self._ignored_paths = {
-            "/health",
-            "/healthz",
-            "/health/",
-            "/healthz/",
-        }
-
-        self._ignored_tasks = set()
+        self._sample_rate = DEFAULT_SAMPLE_RATE
+        self._ignored_paths = DEFAULT_IGNORED_PATH
+        self._ignored_tasks = DEFAULT_IGNORED_TASK
 
     @property
     @synchronized
