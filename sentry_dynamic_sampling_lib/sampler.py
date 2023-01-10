@@ -28,7 +28,7 @@ class ControllerClient(Thread):
         self.config: Config = config
         self.metrics: Metric = metric
         self.session = CachedSession(backend="memory", cache_control=True)
-        super().__init__(*args, name="SentryControllerClient", **kwargs)
+        super().__init__(*args, name="SentryControllerClient", daemon=True, **kwargs)
 
     def run(self):
         # HACK: Django change the timezone mid startup
