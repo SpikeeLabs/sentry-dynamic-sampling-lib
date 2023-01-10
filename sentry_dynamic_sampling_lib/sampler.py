@@ -1,5 +1,6 @@
 import logging
-from threading import Thread
+import signal
+from threading import Event, Thread
 from time import sleep
 
 import schedule
@@ -7,21 +8,34 @@ from requests.exceptions import RequestException
 from requests_cache import CachedSession
 
 from sentry_dynamic_sampling_lib.shared import Config, Metric, MetricType
+from sentry_dynamic_sampling_lib.utils import Singleton
+
+try:
+    from celery.signals import worker_shutdown
+except ModuleNotFoundError:
+    worker_shutdown = None
 
 LOGGER = logging.getLogger("SentryWrapper")
 
 
+def on_exit(*args, **kwargs):
+    ts = TraceSampler()
+    ts.kill()
+    raise KeyboardInterrupt
+
+
 class ControllerClient(Thread):
-    def __init__(self, config, metric, *args, **kwargs) -> None:
+    def __init__(self, stop, config, metric, *args, **kwargs) -> None:
         self.poll_interval = kwargs.pop("poll_interval")
         self.metric_interval = kwargs.pop("metric_interval")
         self.controller_endpoint = kwargs.pop("controller_endpoint")
         self.metric_endpoint = kwargs.pop("metric_endpoint")
         self.app_key = kwargs.pop("app_key")
+        self.stop: Event = stop
         self.config: Config = config
         self.metrics: Metric = metric
         self.session = CachedSession(backend="memory", cache_control=True)
-        super().__init__(*args, name="SentryControllerClient", daemon=True, **kwargs)
+        super().__init__(*args, name="SentryControllerClient", **kwargs)
 
     def run(self):
         # HACK: Django change the timezone mid startup
@@ -30,7 +44,7 @@ class ControllerClient(Thread):
         sleep(5)
         schedule.every(self.poll_interval).seconds.do(self.update_config)
         schedule.every(self.metric_interval).seconds.do(self.update_metrics)
-        while True:
+        while not self.stop.is_set():
             schedule.run_pending()
             sleep(1)
 
@@ -55,6 +69,8 @@ class ControllerClient(Thread):
     def update_metrics(self):
         for metric_type in MetricType:
             counter = self.metrics.get_and_reset(metric_type)
+            if len(counter) == 0:
+                return
             data = {
                 "app": self.app_key,
                 "type": metric_type.value,
@@ -70,12 +86,29 @@ class ControllerClient(Thread):
                 return
 
 
-class TraceSampler:
+class TraceSampler(metaclass=Singleton):
     def __init__(self, *args, **kwargs) -> None:
+        self.stop = Event()
         self.config = Config()
         self.metrics = Metric()
-        self.controller = ControllerClient(*args, self.config, self.metrics, **kwargs)
+        self.controller = ControllerClient(
+            *args, self.stop, self.config, self.metrics, **kwargs
+        )
         self.controller.start()
+
+        signal.signal(signal.SIGINT, on_exit)
+
+        # HACK: Celery has a built in signal mechanism
+        # so we use it
+        if worker_shutdown:
+            worker_shutdown.connect(on_exit)
+
+    def __del__(self):
+        on_exit(self.stop, self.controller)
+
+    def kill(self):
+        self.stop.set()
+        self.controller.join()
 
     def __call__(self, sampling_context):
         if sampling_context:
