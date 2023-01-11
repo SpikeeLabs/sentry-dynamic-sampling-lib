@@ -1,3 +1,4 @@
+import logging
 from collections import Counter
 from enum import Enum
 from threading import RLock
@@ -8,6 +9,8 @@ from sentry_dynamic_sampling_lib.config import (
     DEFAULT_SAMPLE_RATE,
 )
 from sentry_dynamic_sampling_lib.utils import synchronized
+
+LOGGER = logging.getLogger("SentryWrapper")
 
 
 class Config:
@@ -62,33 +65,47 @@ class MetricType(Enum):
 class Metric:
     def __init__(self) -> None:
         self._lock = RLock()
-        self._activate = {
-            MetricType.WSGI: False,
-            MetricType.CELERY: False,
-        }
-        self._counters = {
-            MetricType.WSGI: Counter(),
-            MetricType.CELERY: Counter(),
+        self._metrics = {
+            MetricType.WSGI: {"activated": False, "data": Counter()},
+            MetricType.CELERY: {"activated": False, "data": Counter()},
         }
 
     def set_mode(self, _type, mode):
-        self._activate[_type] = mode
+        self._metrics[_type]["activated"] = mode
 
     def get_mode(self, _type):
-        return self._activate[_type]
+        return self._metrics[_type]["activated"]
 
     @synchronized
     def count_path(self, path):
-        if self._activate[MetricType.WSGI]:
-            self._counters[MetricType.WSGI][path] += 1
+        metric = self._metrics[MetricType.WSGI]
+        if metric["activated"]:
+            metric["data"][path] += 1
 
     @synchronized
     def count_task(self, path):
-        if self._activate[MetricType.CELERY]:
-            self._counters[MetricType.CELERY][path] += 1
+        metric = self._metrics[MetricType.CELERY]
+        if metric["activated"]:
+            metric["data"][path] += 1
 
-    @synchronized
-    def get_and_reset(self, _type):
-        counter = self._counters[_type]
-        self._counters[_type] = Counter()
-        return counter
+    def __iter__(self):
+        """
+        List activated non-empty metrics
+
+        Yields:
+            Tuple(MetricType, Counter): the activated non-empty metrics
+        """
+        for metric_type, metric in self._metrics.items():
+            # check if metric is activated
+            if not metric["activated"]:
+                LOGGER.debug("Metric %s disabled", metric_type.value)
+            with self._lock:
+                # check im metric is empty
+                if len(metric["data"]) == 0:
+                    LOGGER.debug("Metric %s is empty", metric_type.value)
+                    continue
+                data = metric["data"]
+                metric["data"] = Counter()
+
+            # yield outside of the lock to not block write while callee execute
+            yield metric_type, data
