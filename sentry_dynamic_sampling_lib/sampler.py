@@ -23,6 +23,7 @@ LOGGER = logging.getLogger("SentryWrapper")
 def on_exit(*args, **kwargs):
     ts = TraceSampler()
     ts.kill()
+    LOGGER.debug("ControllerClient Killed")
     raise KeyboardInterrupt
 
 
@@ -89,20 +90,11 @@ class ControllerClient(Thread):
         self.metrics.set_mode(MetricType.WSGI, data["wsgi_collect_metrics"])
 
     def update_metrics(self):
-        for metric_type in MetricType:
-            # check if metric is enable
-            mode = self.metrics.get_mode(metric_type)
-            if not mode:
-                LOGGER.debug("Metric %s disabled", metric_type.value)
-                continue
-
-            counter = self.metrics.get_and_reset(metric_type)
-            if len(counter) == 0:
-                return
+        for metric_type, data in self.metrics:
             data = {
                 "app": self.app_key,
                 "type": metric_type.value,
-                "data": dict(counter.most_common(10)),
+                "data": dict(data.most_common(10)),
             }
             try:
                 self.session.post(
@@ -112,7 +104,7 @@ class ControllerClient(Thread):
                 LOGGER.debug("Metric %s pushed", metric_type.value)
             except RequestException as err:
                 LOGGER.warning("Metric Request Failed: %s", err)
-                return
+                continue
 
 
 class TraceSampler(metaclass=Singleton):
