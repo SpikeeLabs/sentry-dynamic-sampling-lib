@@ -62,12 +62,17 @@ class ControllerClient(Thread):
             return
 
         data = resp.json()
-        self.config.sample_rate = data["active_sample_rate"]
-        self.config.ignored_paths = data["wsgi_ignore_path"]
-        self.config.ignored_tasks = data["celery_ignore_task"]
+        self.config.update(data)
+        self.metrics.set_mode(MetricType.CELERY, data["celery_collect_metrics"])
+        self.metrics.set_mode(MetricType.WSGI, data["wsgi_collect_metrics"])
 
     def update_metrics(self):
         for metric_type in MetricType:
+            # check if metric is enable
+            mode = self.metrics.get_mode(metric_type)
+            if not mode:
+                continue
+
             counter = self.metrics.get_and_reset(metric_type)
             if len(counter) == 0:
                 return
