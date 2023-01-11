@@ -99,6 +99,7 @@ class Metric:
             # check if metric is activated
             if not metric["activated"]:
                 LOGGER.debug("Metric %s disabled", metric_type.value)
+                continue
             with self._lock:
                 # check im metric is empty
                 if len(metric["data"]) == 0:
