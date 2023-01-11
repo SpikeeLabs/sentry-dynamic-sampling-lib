@@ -52,7 +52,7 @@ def init_wrapper():
         app_key = build_app_key(client.options)
         controller_endpoint = urljoin(controller_host, controller_path)
         metric_endpoint = urljoin(controller_host, metric_path)
-        print("Sentry Wrapper: Injecting TracesSampler")
+        print(f"Sentry Wrapper: Injecting TracesSampler. App Key : {app_key}")
         client.options["traces_sampler"] = TraceSampler(
             poll_interval=poll_interval,
             metric_interval=metric_interval,
