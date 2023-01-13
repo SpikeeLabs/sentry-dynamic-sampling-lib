@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sentry-dynamic-sampling-lib"
 version = "0.1.0"
-description = ""
+description = "This project aims to provide dynamic sampling without relying on Sentry Dynamic Sampling."
 authors = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
 maintainers = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
 readme = "README.md"
