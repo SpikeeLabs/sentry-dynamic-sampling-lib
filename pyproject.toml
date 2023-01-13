@@ -3,15 +3,28 @@ name = "sentry-dynamic-sampling-lib"
 version = "0.1.0"
 description = ""
 authors = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
+maintainers = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
 readme = "README.md"
-packages = [{include = "sentry_dynamic_sampling_lib"}]
+packages = [{ include = "sentry_dynamic_sampling_lib" }]
+license = "BSD 2"
+repository = "https://github.com/SpikeeLabs/django-admin-action-tools"
+
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 schedule = "^1.1.0"
 wrapt = "^1.14.1"
 psutil = "^5.9.4"
 requests-cache = "^0.9.7"
+pytest = "^7.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -27,3 +40,67 @@ sentry-sdk = "^1.12.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+exclude = '''
+(
+    /(
+        \.git
+        |\.tox
+        |migrations
+    )/
+)
+'''
+include = '\.pyi?$'
+line-length = 119
+
+[tool.pylama]
+format = "pycodestyle"
+linters = "pycodestyle,pyflakes,pylint"
+max_line_length = 119
+skip = ".pytest_cache,.venv/*,*/migrations/*,tests/*,*/tests/*,docs/*"
+
+[tool.pylama.linter.pycodestyle]
+max_line_length = 119
+
+[tool.pylama.linter.pylint]
+disable = "W0108,W0511,W0602,W0603,W0703,C0206,C0209,C0114,C0115,C0116,R0903,R0913,R0914,R0901,E1101,E1130,E1136,W0212"
+# Ignored rules:
+#   - W0108: Lambda may not be necessary
+#   - W0511: fixme, todo
+#   - W0602: global-variable-not-assigned
+#   - W0603: global-statement
+#   - W0703: Catching too general exception
+#   - C0114: missing-module-docstring
+#   - C0115: missing-class-docstring
+#   - C0116: missing-function-docstring
+#   - C0206: consider-using-dict-items
+#   - C0209: consider-using-f-string
+#   - R0903: too-few-public-methods
+#   - R0913: too-many-arguments
+#   - R0914: too-many-locals
+#   - R0901: max-parents: Maximum number of parents for a class
+#   - E1101: generated-members
+#            List of members which are set dynamically and missed by pylint inference system,
+#            and so shouldn't trigger E1101 when accessed.
+#   - E1130: invalid-unary-operand-type
+#            Emitted when a unary operand is used on an object which does not support this type of operation.
+#   - E1136: unsubscriptable-object
+#            Value '%s' is unsubscriptable Emitted when a subscripted value doesn't support subscription
+#   - W0212: protected-access: Access to a protected member of a client class
+
+
+[tool.coverage.run]
+command_line = "-m pytest"
+relative_files = true
+omit = ["tests/*"]
+source = ["sentry_dynamic_sampling_lib"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.pytest.ini_options]
+testpaths = "tests/"
+# addopts = "--doctest-modules -ra -l --tb=short --show-capture=all --color=yes"
