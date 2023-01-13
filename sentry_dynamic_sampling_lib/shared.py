@@ -3,7 +3,7 @@ from collections import Counter
 from enum import Enum
 from threading import RLock
 
-from sentry_dynamic_sampling_lib.config import (
+from sentry_dynamic_sampling_lib.settings import (
     DEFAULT_IGNORED_PATH,
     DEFAULT_IGNORED_TASK,
     DEFAULT_SAMPLE_RATE,
@@ -13,7 +13,7 @@ from sentry_dynamic_sampling_lib.utils import synchronized
 LOGGER = logging.getLogger("SentryWrapper")
 
 
-class Config:
+class AppConfig:
     def __init__(self) -> None:
         self._lock = RLock()
         self._sample_rate = DEFAULT_SAMPLE_RATE
@@ -53,8 +53,8 @@ class Config:
     @synchronized
     def update(self, data):
         self._sample_rate = data["active_sample_rate"]
-        self._ignored_paths = data["wsgi_ignore_path"]
-        self._ignored_tasks = data["celery_ignore_task"]
+        self._ignored_paths = set(data["wsgi_ignore_path"])
+        self._ignored_tasks = set(data["celery_ignore_task"])
 
 
 class MetricType(Enum):
