@@ -9,24 +9,25 @@ import schedule
 from requests.exceptions import RequestException
 from requests_cache import CachedSession
 
-from sentry_dynamic_sampling_lib.shared import Config, Metric, MetricType
+from sentry_dynamic_sampling_lib.shared import AppConfig, Metric, MetricType
 from sentry_dynamic_sampling_lib.utils import Singleton
 
 try:
     from celery.signals import worker_shutdown
 except ModuleNotFoundError:
-    worker_shutdown = None
+    worker_shutdown = None  # pylint: disable=invalid-name
 
 LOGGER = logging.getLogger("SentryWrapper")
 
 
-def on_exit(*args, **kwargs):
-    ts = TraceSampler()
-    ts.kill()
+def on_exit(*args, **kwargs):  # pylint: disable=unused-argument
+    trace_sampler = TraceSampler()
+    trace_sampler.kill()
     LOGGER.debug("ControllerClient Killed")
     raise KeyboardInterrupt
 
 
+# pylint: disable=too-many-instance-attributes
 class ControllerClient(Thread):
     def __init__(
         self,
@@ -44,8 +45,8 @@ class ControllerClient(Thread):
         self.metric_endpoint = metric_endpoint
         self.app_key = app_key
 
-        self._stop = Event()
-        self.config = Config()
+        self.__stopper = Event()
+        self.app_config = AppConfig()
         self.metrics = Metric()
         self.session = CachedSession(backend="memory", cache_control=True)
 
@@ -60,20 +61,18 @@ class ControllerClient(Thread):
         schedule.every(self.poll_interval).seconds.do(self.update_config)
         schedule.every(self.metric_interval).seconds.do(self.update_metrics)
         LOGGER.debug("ControllerClient Started")
-        while not self._stop.is_set():
+        while not self.__stopper.is_set():
             schedule.run_pending()
             sleep(1)
 
     def kill(self):
-        self._stop.set()
+        self.__stopper.set()
         if self.is_alive():
             self.join()
 
     def update_config(self):
         try:
-            resp = self.session.get(
-                self.controller_endpoint.format(self.app_key), timeout=1
-            )
+            resp = self.session.get(self.controller_endpoint.format(self.app_key), timeout=1)
             resp.raise_for_status()
         except RequestException as err:
             LOGGER.warning("App Request Failed: %s", err)
@@ -85,7 +84,7 @@ class ControllerClient(Thread):
 
         LOGGER.debug("Config Polled")
         data = resp.json()
-        self.config.update(data)
+        self.app_config.update(data)
         self.metrics.set_mode(MetricType.CELERY, data["celery_collect_metrics"])
         self.metrics.set_mode(MetricType.WSGI, data["wsgi_collect_metrics"])
 
@@ -121,15 +120,13 @@ class TraceSampler(metaclass=Singleton):
 
     @property
     def has_running_controller(self):
-        if self._tread_for_pid != os.getpid():
+        if self._tread_for_pid != os.getpid() or not self._controller:
             return False
-        if not self._controller:
-            return None
         return self._controller.is_alive()
 
     @property
-    def config(self) -> Config:
-        return self._controller.config
+    def app_config(self) -> AppConfig:
+        return self._controller.app_config
 
     @property
     def metrics(self) -> Metric:
@@ -157,12 +154,12 @@ class TraceSampler(metaclass=Singleton):
         if sampling_context:
             if "wsgi_environ" in sampling_context:
                 path = sampling_context["wsgi_environ"].get("PATH_INFO", "")
-                if path in self.config.ignored_paths:
+                if path in self.app_config.ignored_paths:
                     return 0
                 self.metrics.count_path(path)
             if "celery_job" in sampling_context:
                 task = sampling_context["celery_job"].get("task", "")
-                if task in self.config.ignored_tasks:
+                if task in self.app_config.ignored_tasks:
                     return 0
                 self.metrics.count_task(task)
-        return self.config.sample_rate
+        return self.app_config.sample_rate

@@ -6,16 +6,16 @@ from urllib.parse import urljoin, urlparse
 
 import psutil
 
-from sentry_dynamic_sampling_lib.config import (
+from sentry_dynamic_sampling_lib.sampler import TraceSampler
+from sentry_dynamic_sampling_lib.settings import (
     CONTROLLER_HOST,
     CONTROLLER_PATH,
     METRIC_INTERVAL,
     METRIC_PATH,
     POLL_INTERVAL,
 )
-from sentry_dynamic_sampling_lib.sampler import TraceSampler
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import sentry_sdk as sentry_sdk_type
 
 LOGGER = logging.getLogger("SentryWrapper")
@@ -42,20 +42,14 @@ def init_wrapper():
     sentry_sdk: sentry_sdk_type = importlib.import_module("sentry_sdk")
     client = sentry_sdk.Hub.current.client
 
-    controller_host = CONTROLLER_HOST
-    controller_path = CONTROLLER_PATH
-    metric_path = METRIC_PATH
-    poll_interval = POLL_INTERVAL
-    metric_interval = METRIC_INTERVAL
-
-    if controller_host:
+    if CONTROLLER_HOST:
         app_key = build_app_key(client.options)
-        controller_endpoint = urljoin(controller_host, controller_path)
-        metric_endpoint = urljoin(controller_host, metric_path)
+        controller_endpoint = urljoin(CONTROLLER_HOST, CONTROLLER_PATH)
+        metric_endpoint = urljoin(CONTROLLER_HOST, METRIC_PATH)
         print(f"Sentry Wrapper: Injecting TracesSampler. App Key : {app_key}")
         client.options["traces_sampler"] = TraceSampler(
-            poll_interval=poll_interval,
-            metric_interval=metric_interval,
+            poll_interval=POLL_INTERVAL,
+            metric_interval=METRIC_INTERVAL,
             metric_endpoint=metric_endpoint,
             controller_endpoint=controller_endpoint,
             app_key=app_key,
