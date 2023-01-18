@@ -6,7 +6,7 @@ authors = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
 maintainers = ["jeanloup.monnier <jean-loup.monnier@spikeelabs.fr>"]
 readme = "README.md"
 packages = [{ include = "sentry_dynamic_sampling_lib" }]
-license = "BSD 2"
+license = "BSD-2-Clause"
 repository = "https://github.com/SpikeeLabs/django-admin-action-tools"
 
 classifiers = [
