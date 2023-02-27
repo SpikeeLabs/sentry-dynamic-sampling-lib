@@ -42,6 +42,9 @@ def init_wrapper():
     sentry_sdk: sentry_sdk_type = importlib.import_module("sentry_sdk")
     client = sentry_sdk.Hub.current.client
 
+    if client is None:
+        return
+
     if CONTROLLER_HOST:
         app_key = build_app_key(client.options)
         controller_endpoint = urljoin(CONTROLLER_HOST, CONTROLLER_PATH)

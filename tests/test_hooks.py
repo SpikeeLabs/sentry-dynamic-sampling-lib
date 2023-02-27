@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -24,6 +24,18 @@ def test_init_wrapper_no_sentry(importlib_mock: Mock):
     init_wrapper()
     importlib_mock.util.find_spec.assert_called_once_with("sentry_sdk")
     importlib_mock.import_module.assert_not_called()
+
+
+@patch("sentry_dynamic_sampling_lib.importlib")
+def test_init_wrapper_no_client(importlib_mock: Mock):
+    importlib_mock.util.find_spec.return_value = True
+    sentry_sdk = MagicMock()
+    sentry_sdk.Hub.current.client = None
+    importlib_mock.import_module.return_value = sentry_sdk
+
+    init_wrapper()
+    importlib_mock.util.find_spec.assert_called_once_with("sentry_sdk")
+    importlib_mock.import_module.assert_called_once_with("sentry_sdk")
 
 
 @patch("sentry_dynamic_sampling_lib.TraceSampler")
