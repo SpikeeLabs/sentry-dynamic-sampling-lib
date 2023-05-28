@@ -225,6 +225,12 @@ def test_trace_sampler_call():
     assert ts(ctx) == 0
 
     ts._controller.app_config.ignored_paths = []
+    ts._controller.app_config.ignored_user_agents = ("kube",)
+    ctx = {"wsgi_environ": {"PATH_INFO": "/re", "HTTP_USER_AGENT": "kube/1.26"}}
+    assert ts(ctx) == 0
+
+    ts._controller.app_config.ignored_paths = []
+    ts._controller.app_config.ignored_user_agents = tuple()
     ctx = {"wsgi_environ": {"PATH_INFO": "/re"}}
     assert ts(ctx) == ts._controller.app_config.sample_rate
     ts._controller.metrics.count_path.assert_called_once_with("/re")
