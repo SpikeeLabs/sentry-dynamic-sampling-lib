@@ -93,7 +93,7 @@ class ControllerClient(Thread):
             data = {
                 "app": self.app_key,
                 "type": metric_type.value,
-                "data": dict(data.most_common(10)),
+                "data": dict(data),
             }
             try:
                 self.session.post(
@@ -154,9 +154,11 @@ class TraceSampler(metaclass=Singleton):
         if sampling_context:
             if "wsgi_environ" in sampling_context:
                 path = sampling_context["wsgi_environ"].get("PATH_INFO", "")
-                if path in self.app_config.ignored_paths:
+                user_agent = sampling_context["wsgi_environ"].get("HTTP_USER_AGENT", "")
+                if path in self.app_config.ignored_paths or user_agent.startswith(self.app_config.ignored_user_agents):
                     return 0
                 self.metrics.count_path(path)
+                self.metrics.count_user_agent(user_agent)
             if "celery_job" in sampling_context:
                 task = sampling_context["celery_job"].get("task", "")
                 if task in self.app_config.ignored_tasks:
