@@ -3,6 +3,7 @@ import os
 # default value overridden by controller
 DEFAULT_IGNORED_PATH = {"/health", "/healthz", "/health/", "/healthz/"}
 DEFAULT_IGNORED_TASK = set()
+DEFAULT_IGNORED_USER_AGENT = set()
 DEFAULT_SAMPLE_RATE = 0.0
 
 # controller variables
