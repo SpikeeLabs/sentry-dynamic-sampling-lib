@@ -50,7 +50,7 @@ class AppConfig:
     @ignored_user_agents.setter
     @synchronized
     def ignored_user_agents(self, new_ignored_user_agents):
-        self._ignored_user_agents = set(new_ignored_user_agents)
+        self._ignored_user_agents = tuple(new_ignored_user_agents)
 
     @property
     @synchronized
