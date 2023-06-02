@@ -23,7 +23,7 @@ python = "^3.8"
 schedule = "^1.1.0"
 wrapt = "^1.14.1"
 psutil = "^5.9.4"
-requests-cache = "^0.9.7"
+requests-cache = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.4"
